@@ -85,7 +85,7 @@ public class Utils {
 
     public static String getMouthAndDay(final String dateStr) {
         if (dateStr == null || dateStr.isEmpty()){
-            return null;
+            return "";
         }
         String pattern = "yyyy-MM-dd";
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
@@ -96,7 +96,7 @@ public class Utils {
             System.out.println("Invalid date " + dateStr);
         }
         if (date == null)
-            return null;
+            return "";
         GregorianCalendar calendar = new GregorianCalendar();
         calendar.setTime(date);
         int mouth = calendar.get(Calendar.MONTH)+1;

@@ -18,6 +18,10 @@ public class ExpressmanTrackNumberData {
         trackNumSize = trackNumbers.size();
     }
 
+    public List<String> getTrackTNumbers() {
+        return trackNumbers;
+    }
+
     public String getElement(){
         if (trackNumSize <= PAGE_SIZE) {
             currentIdx = trackNumSize;

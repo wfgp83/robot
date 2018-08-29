@@ -8,6 +8,8 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -15,7 +17,9 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CsvOutputHandler {
+public class CsvOutputHandler{
+
+    private static Logger logger = LoggerFactory.getLogger(CsvOutputHandler.class);
 
     public static List<ExcelData>  parseFile(final String dir, final String cutomerName,
                                              int idx) throws Exception {
@@ -23,6 +27,7 @@ public class CsvOutputHandler {
         for(int prefix = 1; prefix <= idx; prefix++) {
             final String fileName =  Utils.getExportDataFileName(dir,
                     Utils.getFileNameWithPrefixIndex(cutomerName, prefix));
+            logger.info("parse " + fileName);
             File file = new File(fileName);
             CSVParser parser = CSVParser.parse(file, Charset.forName("GB2312"), CSVFormat.EXCEL);
             rets.addAll(getRequiredDatas(parser));
@@ -42,7 +47,7 @@ public class CsvOutputHandler {
         List<ExcelData> rets = new ArrayList<>();
         for (CSVRecord csvRecord : parser) {
             // Accessing Values by Column Index
-            final String trackNum = Utils.getCellData(csvRecord, 0);
+            final String trackNum = Utils.getCellData(csvRecord, 3);
             if (!Utils.isTrackNumber(trackNum))
             {
                 System.out.println("not a track number :=" + trackNum);
@@ -68,6 +73,7 @@ public class CsvOutputHandler {
     }
 
     public static void writeFile(String fileName, List<ExcelData> datas) throws Exception {
+        logger.info("write output file " + fileName);
         Workbook workbook = new HSSFWorkbook();
         Sheet sheet = workbook.createSheet("sheet");
 

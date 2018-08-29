@@ -93,7 +93,6 @@ public class FastApp {
             return;
         }
 
-        int totalItem = 0;
         CsvHandler tnh = new CsvHandler();
         try {
             tnh.parseFile(files);
@@ -115,16 +114,44 @@ public class FastApp {
         tnh.resetNoExpressmanTrackNumbers();
 
         exportData.sentTab();
-        //exportData.selectCheckboxQueryByTrackNumber();
 
-        final int Create_NEW_DIR_Threshold = 60;
+        int fileNameSuffix = 0;
+        final String tabFileNamePrefix = "sendTab";
+        while (tnh.getTrackNumberHandler().hasElement()) {
+            fileNameSuffix ++;
+            final String  trackNums = tnh.getTrackNumberHandler().getElement();
+            exportData.delAndCpForTrackNumbers(trackNums);
+            exportData.queryForSendTab();
+
+            final String sendFileName = Utils.getFileNameWithPrefixIndex(tabFileNamePrefix,
+                    fileNameSuffix);
+            String exportSendDatafileName = Utils.getExportDataFileName(appConfDir,
+                    sendFileName);
+            exportData.nameToClipboard(sendFileName);
+            exportData.exportDataForSendTab(Utils.isFileExist(exportSendDatafileName));
+        }
+
+        List<ExcelData> excelDatas = new ArrayList<>();
+        try {
+            excelDatas = CsvOutputHandler.parseFile(appConfDir,
+                    tabFileNamePrefix, fileNameSuffix);
+            logger.info("export data size := " + excelDatas.size());
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+
+        if (excelDatas.isEmpty()){
+            return;
+        }
+
         int[] retValue = new int[2];
-
         while (tnh.hasNext()) {
             ExpressmanTrackNumberData numDatas = tnh.next();
-            exportData.execute(numDatas, retValue, appConfDir, tnh);
+            exportData.execute(numDatas, retValue, appConfDir, tnh, excelDatas);
         }
+
         final long spendTime = (System.currentTimeMillis() - currTime) /1000;
+        int totalItem = retValue[0];
         final  int total = totalItem + unknownTtem;
         final String msg = "Successful Total " + total +", unknown "+ unknownTtem  + ", success "
                 + totalItem + ",time " + spendTime + " second";
@@ -133,50 +160,45 @@ public class FastApp {
     }
 
     public void execute(ExpressmanTrackNumberData numDatas, int[] retValue,
-                        String appConfDir, CsvHandler tnh){
+                        String appConfDir, CsvHandler tnh, List<ExcelData> excelDatas){
         final int Create_NEW_DIR_Threshold = 60;
         final String customer = numDatas.expressman.replaceAll(
                 "[/<>:\"|?*]", "_");
         retValue[0] += numDatas.trackNumSize;
-        int fileNameSuffix = 0;
-        while (numDatas.hasElement()) {
-            fileNameSuffix++;
-            String dataStr = numDatas.getElement();
-            //logger.info("Send tab " + customer);
-            //exportData.sentTab();
-            delAndCpForTrackNumbers(dataStr);
-            queryForSendTab();
 
-            logger.info("Export data send tab " + customer);
-            final String sendFileName = Utils.getFileNameWithPrefixIndex(customer,
-                    fileNameSuffix);
-            String exportSendDatafileName = Utils.getExportDataFileName(appConfDir,
-                    sendFileName);
-            nameToClipboard(sendFileName);
-            exportDataForSendTab(Utils.isFileExist(exportSendDatafileName));
-            try {
-                Thread.sleep(TWO_SECONDS);
-            } catch (InterruptedException e) {
-                logger.error(e.getMessage());
-            }
+        List<ExcelData> requiredData = new ArrayList<>();
+        List<String> trackNums = numDatas.getTrackTNumbers();
+        if (trackNums.isEmpty()) {
+            logger.info("no data for " + customer);
+            return;
         }
-
+        long currTime = System.currentTimeMillis();
+        trackNums.forEach((v)->{
+            //logger.info("Begin try to find ==========" + v);
+            excelDatas.forEach((k)->{
+                //logger.info("export " + k.trackNumber);
+                if (k.trackNumber.equals(v)) {
+                    requiredData.add(k);
+                }
+                //else {
+                  //  logger.warn("no match track number:" + v);
+                //}
+            });
+            //logger.info("END=============");
+        });
+        logger.info("spend time " + (System.currentTimeMillis() - currTime));
+        if (requiredData.isEmpty()){
+            logger.info("empty match  for " + customer + " " + trackNums.get(0));
+            return;
+        }
+        final String outputFilePrefix = getOutputFileNamePrefix("",
+                customer, tnh.getDateStr());
+        final String outputFileName = Utils.getResultFileName(appConfDir, outputFilePrefix);
+        Utils.deleteFile(outputFileName);
         try {
-            List<ExcelData> excelDatas = CsvOutputHandler.parseFile(appConfDir,
-                    customer, fileNameSuffix);
-
-            if (excelDatas.isEmpty()) {
-                logger.error("no content in " + customer);
-                //execute(numDatas, retValue, appConfDir, tnh);
-                return;
-            }
-            final String outputFilePrefix = getOutputFileNamePrefix("",
-                    customer, tnh.getDateStr());
-            final String outputFileName = Utils.getResultFileName(appConfDir, outputFilePrefix);
-            Utils.deleteFile(outputFileName);
-            CsvOutputHandler.writeFile(outputFileName, excelDatas);
+            CsvOutputHandler.writeFile(outputFileName, requiredData);
         } catch (Exception e) {
-            logger.error(e.getMessage());
+           logger.error(e.getMessage());
         }
     }
 

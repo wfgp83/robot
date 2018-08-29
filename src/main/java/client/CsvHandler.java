@@ -18,6 +18,12 @@ public class CsvHandler {
     List<ExpressmanTrackNumberData> trackNumbers;
     Iterator<ExpressmanTrackNumberData> customerItr;
 
+    TrackNumberHandler trackNumberHandler = new TrackNumberHandler();
+
+    public TrackNumberHandler getTrackNumberHandler() {
+        return trackNumberHandler;
+    }
+
     List<ExpressTrackCustomerData> noExpressmanTrackNumbers;
     Optional<String> dateString = Optional.empty();
 
@@ -86,7 +92,9 @@ public class CsvHandler {
             }
             if (!dateString.isPresent()) {
                 final String dateStr = Utils.getCellData(csvRecord, 5);
-                dateString = Optional.of(Utils.getMouthAndDay(dateStr));
+                if (!dateStr.isEmpty()) {
+                    dateString = Optional.of(Utils.getMouthAndDay(dateStr));
+                }
             }
             String expressman = Utils.getCellData(csvRecord, 9);
             String customer = Utils.getCellData(csvRecord, 10);
@@ -110,6 +118,7 @@ public class CsvHandler {
         Map<String, List<String>> datas = new HashMap<>();
         trackNumbers.forEach((v)->{
             List<String> tracks = datas.get(v.expressman);
+            trackNumberHandler.addTrackNumbers(v.trackNumbers);
             if (tracks == null) {
                 datas.put(v.expressman, v.trackNumbers);
             } else {

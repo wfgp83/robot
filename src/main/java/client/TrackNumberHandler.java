@@ -3,6 +3,8 @@ package client;
 import org.apache.poi.hssf.usermodel.HSSFFont;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,13 +15,20 @@ import java.util.*;
 
 public class TrackNumberHandler {
 
-    private List<String> trackNumbers;
+    private static Logger logger = LoggerFactory.getLogger(TrackNumberHandler.class);
+    private List<String> trackNumbers = new ArrayList<>();
     private int currentIdx;
     private int trackNumSize;
-    private static final int PAGE_SIZE = 1000;
+    private static final int PAGE_SIZE = 900;
 
     public void setTrackNumbers(List<String> trackNumbers){
         this.trackNumbers = trackNumbers;
+        currentIdx = 0;
+        trackNumSize = this.trackNumbers.size();
+    }
+
+    public void addTrackNumbers(List<String> trackNumbers){
+        this.trackNumbers.addAll(trackNumbers);
         currentIdx = 0;
         trackNumSize = this.trackNumbers.size();
     }
@@ -105,6 +114,7 @@ public class TrackNumberHandler {
 
     public String getElement(){
         if (trackNumSize <= PAGE_SIZE) {
+            logger.info("track number size:  total size: "+ trackNumSize + " actual size:" + trackNumbers.size());
             currentIdx = trackNumSize;
             return joinElement(trackNumbers);
         }
@@ -112,7 +122,7 @@ public class TrackNumberHandler {
         if (endIdx > trackNumSize)
             endIdx = trackNumSize;
         List<String> subList = trackNumbers.subList(currentIdx, endIdx);
-        System.out.println("track number size: " + (endIdx-currentIdx) + " total size: "+ trackNumSize);
+        logger.info("track number size: " + (endIdx-currentIdx) + " total size: "+ trackNumSize);
 
         currentIdx = endIdx;
         return joinElement(subList);
