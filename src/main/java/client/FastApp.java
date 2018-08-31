@@ -120,15 +120,16 @@ public class FastApp {
         while (tnh.getTrackNumberHandler().hasElement()) {
             fileNameSuffix ++;
             final String  trackNums = tnh.getTrackNumberHandler().getElement();
-            exportData.delAndCpForTrackNumbers(trackNums);
-            exportData.queryForSendTab();
-
             final String sendFileName = Utils.getFileNameWithPrefixIndex(tabFileNamePrefix,
                     fileNameSuffix);
-            String exportSendDatafileName = Utils.getExportDataFileName(appConfDir,
+            final String exportSendDatafileName = Utils.getExportDataFileName(appConfDir,
                     sendFileName);
-            exportData.nameToClipboard(sendFileName);
-            exportData.exportDataForSendTab(Utils.isFileExist(exportSendDatafileName));
+
+            int waitTime = 1;
+            while (CsvOutputHandler.isFileEmpty(exportSendDatafileName)) {
+                exportData.queryAndExport(trackNums, sendFileName, exportSendDatafileName, waitTime);
+                waitTime++;
+            }
         }
 
         List<ExcelData> excelDatas = new ArrayList<>();
@@ -157,6 +158,18 @@ public class FastApp {
                 + totalItem + ",time " + spendTime + " second";
         logger.info(msg);
         JOptionPane.showMessageDialog(null, msg);
+    }
+
+    public void queryAndExport(final String  trackNums, final String sendFileName,
+                               String exportSendDatafileName, int waitTime) {
+        final int firstWaitTime = 1;
+        if (waitTime == firstWaitTime) {
+            delAndCpForTrackNumbers(trackNums);
+        }
+        queryForSendTab(waitTime);
+
+        nameToClipboard(sendFileName);
+        exportDataForSendTab(Utils.isFileExist(exportSendDatafileName));
     }
 
     public void execute(ExpressmanTrackNumberData numDatas, int[] retValue,
@@ -247,15 +260,15 @@ public class FastApp {
         systemClipboard.setContents(dataStr, dataStr);
     }
 
-    public void query(MyPoint point){
+    public void query(MyPoint point, int waitTime){
         robot.mouseMove(point.x, point.y);
         clickLeftMouse();
-        robot.delay(1000);
+        robot.delay(1000 * waitTime);
     }
 
-    public void queryForSendTab(){
+    public void queryForSendTab(int waitTime){
         MyPoint point = propertiesReader.getSendTabQueryPoint();
-        query(point);
+        query(point, waitTime);
     }
 
     public void delAndCp(MyPoint clearP, MyPoint point){

@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,23 @@ import java.util.List;
 public class CsvOutputHandler{
 
     private static Logger logger = LoggerFactory.getLogger(CsvOutputHandler.class);
+
+    public static boolean isFileEmpty(final String fullName) {
+        logger.info("isFileEmpty parse " + fullName);
+        File file = new File(fullName);
+        if (!file.exists()) {
+            return true;
+        }
+
+        CSVParser parser = null;
+        try {
+            parser = CSVParser.parse(file, Charset.forName("GB2312"), CSVFormat.EXCEL);
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+        }
+        List<ExcelData> datas = getRequiredDatas(parser, true);
+        return datas.isEmpty();
+    }
 
     public static List<ExcelData>  parseFile(final String dir, final String cutomerName,
                                              int idx) throws Exception {
@@ -30,7 +48,7 @@ public class CsvOutputHandler{
             logger.info("parse " + fileName);
             File file = new File(fileName);
             CSVParser parser = CSVParser.parse(file, Charset.forName("GB2312"), CSVFormat.EXCEL);
-            rets.addAll(getRequiredDatas(parser));
+            rets.addAll(getRequiredDatas(parser, false));
         }
         processProvince(rets);
         return rets;
@@ -43,25 +61,32 @@ public class CsvOutputHandler{
         }
     }
 
-    public static List<ExcelData> getRequiredDatas(CSVParser parser){
+    public static List<ExcelData> getRequiredDatas(CSVParser parser, boolean isCheckFileEmpty){
         List<ExcelData> rets = new ArrayList<>();
+        if (parser == null) {
+            return rets;
+        }
         for (CSVRecord csvRecord : parser) {
             // Accessing Values by Column Index
             final String trackNum = Utils.getCellData(csvRecord, 3);
+            if (trackNum.isEmpty()) {
+                continue;
+            }
+            if (isCheckFileEmpty) {
+                rets.add(new ExcelData(trackNum, "", ""));
+                break;
+            }
             if (!Utils.isTrackNumber(trackNum))
             {
-                System.out.println("not a track number :=" + trackNum);
+                logger.info("not a track number :=" + trackNum);
                 continue;
             }
 
             final String dstAddress = Utils.getCellData(csvRecord, 11);
             final String sender = Utils.getCellData(csvRecord, 17);
-            if (Utils.isTrackNumber(trackNum))
-                rets.add(new ExcelData(trackNum, dstAddress, sender));
-            else
-                System.err.println("not track number " + trackNum);
+            rets.add(new ExcelData(trackNum, dstAddress, sender));
         }
-        System.out.println(rets.size());
+        logger.info("item size := " + rets.size());
         return rets;
     }
 
