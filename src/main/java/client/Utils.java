@@ -3,6 +3,8 @@ package client;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DateUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.text.ParseException;
@@ -11,16 +13,41 @@ import java.util.*;
 
 public class Utils {
 
+    private static Logger logger = LoggerFactory.getLogger(Utils.class);
+
     public static String getExportDataFileName(final String dir, final String customerName) {
-        StringJoiner sb = new StringJoiner("", dir + "\\rawData\\", ".CSV");
+        return getFileName(dir, customerName, "rawData", ".CSV");
+    }
+
+    public static String getTrackNumberForExportDataFileName(final String dir, final String customerName) {
+        return getFileName(dir, customerName, "rawData", ".txt");
+    }
+
+    public static String getResultFileName(final String dir, final String customerName) {
+        return getFileName(dir, customerName, "output", ".CSV");
+    }
+
+    public static String getNoMatchFileName(final String dir, final String customerName) {
+        return getFileName(dir, customerName, "noMatch", ".txt");
+    }
+
+    public static String getTrackNumberFileName(final String dir, final String customerName) {
+        return getFileName(dir, customerName, "trackNumber", ".txt");
+    }
+
+    private static String getFileName(final String dir, final String customerName,
+                                      final String subDir, final String suffix) {
+        StringJoiner sb = new StringJoiner("", dir + "\\" + subDir +"\\", suffix);
         sb.add(customerName);
         return sb.toString();
     }
 
-    public static String getResultFileName(final String dir, final String customerName) {
-        StringJoiner sb = new StringJoiner("", dir + "\\output\\", ".XLS");
-        sb.add(customerName);
-        return sb.toString();
+    public static String joinElement(List<String> elements){
+        StringJoiner sj = new StringJoiner("\n");
+        for (String trackNumber : elements) {
+            sj.add(trackNumber);
+        }
+        return sj.toString();
     }
 
     public static boolean isFileExist(final String fileName) {
@@ -93,7 +120,7 @@ public class Utils {
         try {
             date = simpleDateFormat.parse(dateStr);
         } catch (ParseException e) {
-            System.out.println("Invalid date " + dateStr);
+            logger.error("Invalid date " + dateStr);
         }
         if (date == null)
             return "";
@@ -113,13 +140,22 @@ public class Utils {
         return  (!content.isEmpty() && content.matches(regex));
     }
 
+    public static boolean trackNumberIsTitle(final String trackNum) {
+        return (trackNum.isEmpty() ||
+                trackNum.startsWith("记录数") ||
+                trackNum.startsWith("运单编号") ||
+                trackNum.startsWith("基本信息") ||
+                trackNum.startsWith("订单编号") ||
+                trackNum.startsWith("百世单号"));
+    }
+
     public static String getCellData(CSVRecord csvRecord, int idx){
         String data = "";
         try {
             data = csvRecord.get(idx);
             data = data.trim();
         } catch (ArrayIndexOutOfBoundsException e){
-            System.err.println("no csv record at cell " + idx);
+            logger.error("no csv record at cell " + idx);
         }
         return data;
     }

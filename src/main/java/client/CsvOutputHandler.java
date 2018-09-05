@@ -16,14 +16,33 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CsvOutputHandler{
 
     private static Logger logger = LoggerFactory.getLogger(CsvOutputHandler.class);
+    private static int invalidItemCount;
 
-    public static boolean isFileEmpty(final String fullName) {
-        logger.info("isFileEmpty parse " + fullName);
+    public static int getInvalidItemCount() {
+        return invalidItemCount;
+    }
+
+    public static void increaseInvalidItemCount() {
+        invalidItemCount++;
+    }
+
+    public static void resetInvalidItemCount() {
+        invalidItemCount = 0;
+    }
+
+    public static boolean isFileEmpty(final String fullName, int waitTime) {
+        // first time for a file
+        if (waitTime == 1) {
+            return true;
+        }
+
         File file = new File(fullName);
         if (!file.exists()) {
             return true;
@@ -35,13 +54,18 @@ public class CsvOutputHandler{
         } catch (IOException e) {
             logger.error(e.getMessage());
         }
-        List<ExcelData> datas = getRequiredDatas(parser, true);
-        return datas.isEmpty();
+        Set<ExcelData> datas = getRequiredDatas(parser, true);
+        boolean isEm = datas.isEmpty();
+        if (isEm) {
+            logger.info("retry export file " + fullName);
+        }
+        return isEm;
     }
 
     public static List<ExcelData>  parseFile(final String dir, final String cutomerName,
                                              int idx) throws Exception {
         List<ExcelData> rets = new ArrayList<>();
+        resetInvalidItemCount();
         for(int prefix = 1; prefix <= idx; prefix++) {
             final String fileName =  Utils.getExportDataFileName(dir,
                     Utils.getFileNameWithPrefixIndex(cutomerName, prefix));
@@ -61,24 +85,26 @@ public class CsvOutputHandler{
         }
     }
 
-    public static List<ExcelData> getRequiredDatas(CSVParser parser, boolean isCheckFileEmpty){
-        List<ExcelData> rets = new ArrayList<>();
+    public static Set<ExcelData> getRequiredDatas(CSVParser parser, boolean isCheckFileEmpty){
+        Set<ExcelData> rets = new HashSet<>();
         if (parser == null) {
             return rets;
         }
         for (CSVRecord csvRecord : parser) {
             // Accessing Values by Column Index
             final String trackNum = Utils.getCellData(csvRecord, 3);
-            if (trackNum.isEmpty()) {
+            if (Utils.trackNumberIsTitle(trackNum)) {
                 continue;
             }
+
             if (isCheckFileEmpty) {
                 rets.add(new ExcelData(trackNum, "", ""));
                 break;
             }
-            if (!Utils.isTrackNumber(trackNum))
-            {
-                logger.info("not a track number :=" + trackNum);
+
+            if (!Utils.isTrackNumber(trackNum)) {
+                logger.warn("not a track number :=" + trackNum);
+                increaseInvalidItemCount();
                 continue;
             }
 
@@ -86,15 +112,8 @@ public class CsvOutputHandler{
             final String sender = Utils.getCellData(csvRecord, 17);
             rets.add(new ExcelData(trackNum, dstAddress, sender));
         }
-        logger.info("item size := " + rets.size());
-        return rets;
-    }
 
-    public static void main(String[] args) throws Exception {
-        final String dir = "D:\\wfgp_util";
-        final String fileName = dir + "\\data\\891.CSV";
-        List<ExcelData> datas = parseFile(dir, "891", 1);
-        writeFile(Utils.getResultFileName(dir,"8888"), datas);
+        return rets;
     }
 
     public static void writeFile(String fileName, List<ExcelData> datas) throws Exception {

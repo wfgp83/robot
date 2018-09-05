@@ -10,4 +10,19 @@ public class ExcelData {
         this.province = province;
         this.sender = sender;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ExcelData excelData = (ExcelData) o;
+
+        return trackNumber.equals(excelData.trackNumber);
+    }
+
+    @Override
+    public int hashCode() {
+        return trackNumber.hashCode();
+    }
 }

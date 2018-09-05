@@ -10,10 +10,15 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+
+import static java.util.stream.Collectors.toList;
 
 public class FastApp {
 
@@ -46,6 +51,8 @@ public class FastApp {
         dirs.add(appConfDir +"\\log");
         dirs.add(appConfDir +"\\output");
         dirs.add(appConfDir +"\\unknown");
+        dirs.add(appConfDir +"\\noMatch");
+        dirs.add(appConfDir +"\\trackNumber");
 
         for (String dir : dirs) {
             try {
@@ -59,7 +66,7 @@ public class FastApp {
             Utils.createDir(dir);
         }
 
-        System.out.println("Confirm export data to " + appConfDir +
+        logger.info("Confirm export data to " + appConfDir +
                 "\\rawData directory,\nThen press any keyboard key to start ...");
         try {
             System.in.read();
@@ -80,6 +87,11 @@ public class FastApp {
         final String rawDir = appConfDir +"\\rawData";
         File folder = new File(rawDir);
         File[] listOfFiles = folder.listFiles();
+        if (listOfFiles == null) {
+            logger.error("no file under " + rawDir);
+            return;
+        }
+
         List<String> files = new ArrayList<>();
         for (File f: listOfFiles) {
             if (!f.isFile()) {
@@ -124,9 +136,12 @@ public class FastApp {
                     fileNameSuffix);
             final String exportSendDatafileName = Utils.getExportDataFileName(appConfDir,
                     sendFileName);
+            final String trackNumberFileName = Utils.getTrackNumberForExportDataFileName(appConfDir,
+                    sendFileName);
+            exportData.writeTxtFile(trackNumberFileName, trackNums);
 
             int waitTime = 1;
-            while (CsvOutputHandler.isFileEmpty(exportSendDatafileName)) {
+            while (CsvOutputHandler.isFileEmpty(exportSendDatafileName, waitTime)) {
                 exportData.queryAndExport(trackNums, sendFileName, exportSendDatafileName, waitTime);
                 waitTime++;
             }
@@ -136,7 +151,6 @@ public class FastApp {
         try {
             excelDatas = CsvOutputHandler.parseFile(appConfDir,
                     tabFileNamePrefix, fileNameSuffix);
-            logger.info("export data size := " + excelDatas.size());
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
@@ -154,10 +168,20 @@ public class FastApp {
         final long spendTime = (System.currentTimeMillis() - currTime) /1000;
         int totalItem = retValue[0];
         final  int total = totalItem + unknownTtem;
-        final String msg = "Successful Total " + total +", unknown "+ unknownTtem  + ", success "
-                + totalItem + ",time " + spendTime + " second";
+        final String msg = exportData.displayMsg(total, unknownTtem, excelDatas.size(),
+                CsvOutputHandler.getInvalidItemCount(), spendTime);
         logger.info(msg);
         JOptionPane.showMessageDialog(null, msg);
+    }
+
+    private String displayMsg(int total, int unknown, int valid, int invalid, long spendTime) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Total :").append(total).append("\n");
+        sb.append("Unknown :").append(unknown).append("\n");
+        sb.append("Valid :").append(valid).append("\n");
+        sb.append("Invalid :").append(invalid).append("\n");
+        sb.append("spendTime :").append(spendTime);
+        return sb.toString();
     }
 
     public void queryAndExport(final String  trackNums, final String sendFileName,
@@ -165,6 +189,8 @@ public class FastApp {
         final int firstWaitTime = 1;
         if (waitTime == firstWaitTime) {
             delAndCpForTrackNumbers(trackNums);
+        } else {
+            waitTime = waitTime * 3;
         }
         queryForSendTab(waitTime);
 
@@ -174,34 +200,37 @@ public class FastApp {
 
     public void execute(ExpressmanTrackNumberData numDatas, int[] retValue,
                         String appConfDir, CsvHandler tnh, List<ExcelData> excelDatas){
-        final int Create_NEW_DIR_Threshold = 60;
         final String customer = numDatas.expressman.replaceAll(
                 "[/<>:\"|?*]", "_");
         retValue[0] += numDatas.trackNumSize;
 
-        List<ExcelData> requiredData = new ArrayList<>();
         List<String> trackNums = numDatas.getTrackTNumbers();
         if (trackNums.isEmpty()) {
-            logger.info("no data for " + customer);
+            logger.info("no track numbers for " + customer);
             return;
         }
+
         long currTime = System.currentTimeMillis();
-        trackNums.forEach((v)->{
-            //logger.info("Begin try to find ==========" + v);
-            excelDatas.forEach((k)->{
-                //logger.info("export " + k.trackNumber);
-                if (k.trackNumber.equals(v)) {
-                    requiredData.add(k);
-                }
-                //else {
-                  //  logger.warn("no match track number:" + v);
-                //}
-            });
-            //logger.info("END=============");
-        });
-        logger.info("spend time " + (System.currentTimeMillis() - currTime));
+
+        List<ExcelData> requiredData = excelDatas.stream().filter(
+                v->trackNums.stream().anyMatch(k-> v.trackNumber.equals(k)))
+                .collect(toList());
+        List<String> noMatchTrackNums = trackNums.stream().filter(
+                k->excelDatas.stream().noneMatch(v->k.equals(v.trackNumber)))
+                .collect(toList());
+        int spendTime = (int) (System.currentTimeMillis() - currTime);
+        if (spendTime != 0) {
+            logger.info("spend time " + (System.currentTimeMillis() - currTime));
+        }
+        writeOutputFile(requiredData, appConfDir, tnh, customer);
+        writeNoMatchTrackNumbersFile(noMatchTrackNums, appConfDir, tnh, customer);
+        writeTrackNumbersFile(trackNums, appConfDir, tnh, customer);
+    }
+
+    private void writeOutputFile(List<ExcelData> requiredData, String appConfDir, CsvHandler tnh,
+                                 String customer) {
         if (requiredData.isEmpty()){
-            logger.info("empty match  for " + customer + " " + trackNums.get(0));
+            logger.warn("empty match  for " + customer);
             return;
         }
         final String outputFilePrefix = getOutputFileNamePrefix("",
@@ -211,7 +240,44 @@ public class FastApp {
         try {
             CsvOutputHandler.writeFile(outputFileName, requiredData);
         } catch (Exception e) {
-           logger.error(e.getMessage());
+            logger.error(e.getMessage());
+        }
+    }
+
+    private void writeNoMatchTrackNumbersFile(List<String> requiredData, String appConfDir, CsvHandler tnh,
+                                               String customer) {
+        if (requiredData.isEmpty()){
+            return;
+        }
+        final String outputFilePrefix = getOutputFileNamePrefix("",
+                customer, tnh.getDateStr());
+        final String outputFileName = Utils.getNoMatchFileName(appConfDir, outputFilePrefix);
+        writeTxtFile(outputFileName, requiredData);
+    }
+
+    private void writeTrackNumbersFile(List<String> requiredData, String appConfDir, CsvHandler tnh,
+                                              String customer) {
+        if (requiredData.isEmpty()){
+            return;
+        }
+        final String outputFilePrefix = getOutputFileNamePrefix("",
+                customer, tnh.getDateStr());
+        final String outputFileName = Utils.getTrackNumberFileName(appConfDir, outputFilePrefix);
+        writeTxtFile(outputFileName, requiredData);
+    }
+
+    private void writeTxtFile(final String outputFileName, List<String> requiredData) {
+        writeTxtFile(outputFileName, Utils.joinElement(requiredData));
+    }
+
+    private void writeTxtFile(final String outputFileName, final String requiredData) {
+        Utils.deleteFile(outputFileName);
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName));
+            writer.write(requiredData);
+            writer.close();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
         }
     }
 

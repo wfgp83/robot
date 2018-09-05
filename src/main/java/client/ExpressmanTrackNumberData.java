@@ -25,7 +25,7 @@ public class ExpressmanTrackNumberData {
     public String getElement(){
         if (trackNumSize <= PAGE_SIZE) {
             currentIdx = trackNumSize;
-            return joinElement(trackNumbers);
+            return Utils.joinElement(trackNumbers);
         }
         int endIdx = currentIdx + PAGE_SIZE;
         if (endIdx > trackNumSize)
@@ -34,18 +34,10 @@ public class ExpressmanTrackNumberData {
         System.out.println("track number size: " + (endIdx-currentIdx) + " total size: "+ trackNumSize);
 
         currentIdx = endIdx;
-        return joinElement(subList);
+        return Utils.joinElement(subList);
     }
 
     public boolean hasElement(){
         return trackNumSize > currentIdx;
-    }
-
-    public String joinElement(List<String> elements){
-        StringJoiner sj = new StringJoiner("\n");
-        for (String trackNumber : elements) {
-            sj.add(trackNumber);
-        }
-        return sj.toString();
     }
 }

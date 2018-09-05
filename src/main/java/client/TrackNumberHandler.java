@@ -6,6 +6,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.rmi.CORBA.Util;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -104,27 +105,19 @@ public class TrackNumberHandler {
         return trackNumSize > currentIdx;
     }
 
-    public String joinElement(List<String> elements){
-        StringJoiner sj = new StringJoiner("\n");
-        for (String trackNumber : elements) {
-            sj.add(trackNumber);
-        }
-        return sj.toString();
-    }
-
     public String getElement(){
         if (trackNumSize <= PAGE_SIZE) {
             logger.info("track number size:  total size: "+ trackNumSize + " actual size:" + trackNumbers.size());
             currentIdx = trackNumSize;
-            return joinElement(trackNumbers);
+            return Utils.joinElement(trackNumbers);
         }
         int endIdx = currentIdx + PAGE_SIZE;
         if (endIdx > trackNumSize)
             endIdx = trackNumSize;
         List<String> subList = trackNumbers.subList(currentIdx, endIdx);
-        logger.info("track number size: " + (endIdx-currentIdx) + " total size: "+ trackNumSize);
+        logger.info("export index: " + endIdx+ " total size: "+ trackNumSize);
 
         currentIdx = endIdx;
-        return joinElement(subList);
+        return Utils.joinElement(subList);
     }
 }

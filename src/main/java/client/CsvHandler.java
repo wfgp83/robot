@@ -84,12 +84,16 @@ public class CsvHandler {
         Map<String, List<String>> datas = new HashMap<>();
         for (CSVRecord csvRecord : parser) {
             // Accessing Values by Column Index
-            String trackNum = Utils.getCellData(csvRecord, 0);
-            if (!Utils.isTrackNumber(trackNum))
-            {
-                logger.info("not a track number :=" + trackNum);
+            final String trackNum = Utils.getCellData(csvRecord, 0);
+            if (Utils.trackNumberIsTitle(trackNum)) {
                 continue;
             }
+
+            if (!Utils.isTrackNumber(trackNum)) {
+                logger.warn("not a track number :=" + trackNum);
+                continue;
+            }
+
             if (!dateString.isPresent()) {
                 final String dateStr = Utils.getCellData(csvRecord, 5);
                 if (!dateStr.isEmpty()) {
