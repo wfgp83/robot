@@ -48,12 +48,6 @@ public class TrackNumberHandler {
             return "";
         }
 
-        //String dates = "";
-        //try {
-           // dates = Utils.getMouthAndDay(Utils.getCellContent(c5));
-       // } catch (ParseException e) {
-            //e.printStackTrace();
-        //}
         StringJoiner sb = new StringJoiner("-");
         sb.add(Utils.getCellContent(c9));
         sb.add(Utils.getCellContent(c10));

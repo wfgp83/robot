@@ -24,7 +24,7 @@ public class Utils {
     }
 
     public static String getResultFileName(final String dir, final String customerName) {
-        return getFileName(dir, customerName, "output", ".CSV");
+        return getFileName(dir, customerName, "output", ".XLS");
     }
 
     public static String getNoMatchFileName(final String dir, final String customerName) {
@@ -43,7 +43,7 @@ public class Utils {
     }
 
     public static String joinElement(List<String> elements){
-        StringJoiner sj = new StringJoiner("\n");
+        StringJoiner sj = new StringJoiner("\r\n");
         for (String trackNumber : elements) {
             sj.add(trackNumber);
         }
