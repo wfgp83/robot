@@ -186,6 +186,8 @@ public class FastApp {
 
     public void queryAndExport(final String  trackNums, final String sendFileName,
                                String exportSendDatafileName, int waitTime) {
+        Utils.deleteFile(exportSendDatafileName);
+        boolean fileExist = false;
         final int firstWaitTime = 1;
         if (waitTime == firstWaitTime) {
             delAndCpForTrackNumbers(trackNums);
@@ -195,7 +197,7 @@ public class FastApp {
         queryForSendTab(waitTime);
 
         nameToClipboard(sendFileName);
-        exportDataForSendTab(Utils.isFileExist(exportSendDatafileName));
+        exportDataForSendTab(fileExist);
     }
 
     public void execute(ExpressmanTrackNumberData numDatas, int[] retValue,
