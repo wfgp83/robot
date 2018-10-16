@@ -104,6 +104,22 @@ public class PropertiesReader {
                 Integer.valueOf(prop.getProperty(Send_Tab_Export_Excel_Button_Override_Y_KEY)));
     }
 
+    public int getDelayBetweenExportAndFileNameInSecond(){
+        String edS = prop.getProperty(Delay_Between_Export_And_File_Name_In_Second);
+        if (edS == null){
+            edS = "0";
+        }
+        return Integer.valueOf(edS);
+    }
+
+    public int getDelayBetweenExportFileNameAndOkInSecond(){
+        String edS = prop.getProperty(Delay_Between_File_Name_And_Ok_In_Second);
+        if (edS == null){
+            edS = "0";
+        }
+        return Integer.valueOf(edS);
+    }
+
     public static String Receive_Tab_X_KEY = "receive.tab.x";
     public static String Receive_Tab_Y_KEY = "receive.tab.y";
     public static String Receive_Tab_Customer_Name_X_KEY = "receive.tab.customer.name.x";
@@ -141,4 +157,7 @@ public class PropertiesReader {
     public static String Send_Tab_Export_Excel_Button_Complete_Y_KEY = "send.tab.export.excel.button.complete.y";
     public static String Send_Tab_Export_Excel_Button_Override_X_KEY = "send.tab.export.excel.button.override.x";
     public static String Send_Tab_Export_Excel_Button_Override_Y_KEY = "send.tab.export.excel.button.override.y";
+
+    public static String Delay_Between_Export_And_File_Name_In_Second = "delay.between.export.and.file.name.in.second";
+    public static String Delay_Between_File_Name_And_Ok_In_Second = "delay.between.file.name.And.Ok.Button.in.second";
 }

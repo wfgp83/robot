@@ -294,6 +294,11 @@ public class FastApp {
         robot.mouseMove(excel.x,excel.y);
         clickLeftMouse();
 
+        int delay = propertiesReader.getDelayBetweenExportAndFileNameInSecond();
+        if (delay != 0) {
+            robot.delay(delay * 1000);
+        }
+
         // file name
         ctrlV();
 
@@ -307,7 +312,12 @@ public class FastApp {
             clickLeftMouse();
         }
 
-        robot.delay(100);
+        delay = propertiesReader.getDelayBetweenExportFileNameAndOkInSecond();
+        if (delay != 0) {
+            robot.delay(delay * 1000);
+        } else{
+            robot.delay(100);
+        }
 
         // export success
         robot.mouseMove(complete.x,complete.y);
